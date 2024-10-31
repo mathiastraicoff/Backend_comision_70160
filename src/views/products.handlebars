@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>Productos</title>
+</head>
+<body>
+    <h1>Productos</h1>
+    <a href="/carts/{{cartId}}">Ir al carrito (<span id="cart-count">{{cartCount}}</span>)</a>
+    <br><br>
+    <div>
+        <label for="category">Filtrar por categoría:</label>
+        <select id="category" name="category" onchange="this.form.submit()">
+            <option value="">Todas</option>
+            <option value="Filtración de Agua">Filtración de Agua</option>
+            <option value="Purificación Ecológica">Purificación Ecológica</option>
+            <option value="Sistemas de Filtración">Sistemas de Filtración</option>
+            <option value="Purificación Doméstica">Purificación Doméstica</option>
+            <option value="Filtración Rápida">Filtración Rápida</option>
+            <option value="Filtración Avanzada">Filtración Avanzada</option>
+            <option value="Filtración Cerámica">Filtración Cerámica</option>
+            <option value="Purificación por Luz UV">Purificación por Luz UV</option>
+            <option value="Purificadores de Gran Capacidad">Purificadores de Gran Capacidad</option>
+            <option value="Purificadores Portátiles">Purificadores Portátiles</option>
+            <option value="Purificadores de Oficina">Purificadores de Oficina</option>
+            <option value="Purificadores de Alta Capacidad">Purificadores de Alta Capacidad</option>
+            <option value="Filtración con Carbón">Filtración con Carbón</option>
+            <option value="Fácil Instalación">Fácil Instalación</option>
+            <option value="Ecológico y Eficiente">Ecológico y Eficiente</option>
+            <option value="Diseño Moderno de Filtración">Diseño Moderno de Filtración</option>
+        </select>
+        <label for="available">Disponibles:</label>
+        <input type="checkbox" id="available" name="available" onchange="this.form.submit()">
+    </div>
+    <br><br>
+    <form method="GET" action="/products">
+        <label for="sort">Ordenar por precio:</label>
+        <select name="sort" id="sort" onchange="this.form.submit()">
+            <option value="">Seleccione</option>
+            <option value="asc" {{#if sortAsc}}selected{{/if}}>Menor a Mayor</option>
+            <option value="desc" {{#if sortDesc}}selected{{/if}}>Mayor a Menor</option>
+        </select>
+        <input type="hidden" name="query" value="{{query}}">
+        <input type="hidden" name="limit" value="{{limit}}">
+        <input type="hidden" name="page" value="{{currentPage}}">
+    </form>
+
+    <div class="product-container">
+        {{#each products}}
+            <div class="product-card">
+                <h2>{{this.title}}</h2>
+                <p>Precio: ${{this.price}}</p>
+                <a href="/products/{{this._id}}">Ver más detalles</a>
+                <form action="/api/products/{{this._id}}/add-to-cart" method="POST" class="add-to-cart-form">
+                    <input type="hidden" name="quantity" value="1">
+                    <button type="submit" class="add-to-cart-btn">Agregar al carrito</button>
+                </form>
+            </div>
+        {{/each}}
+    </div>
+    <div class="pagination">
+        {{#if hasPrevPage}}   
+            <a href="/products?page={{prevPage}}&limit={{limit}}&sort={{sort}}&query={{query}}&category={{category}}&available={{available}}">Página Anterior</a>
+        {{/if}}
+        <span>Página {{currentPage}} de {{totalPages}}</span>
+        {{#if hasNextPage}}
+            <a href="/products?page={{nextPage}}&limit={{limit}}&sort={{sort}}&query={{query}}&category={{category}}&available={{available}}">Página Siguiente</a>
+        {{/if}}
+    </div>
+
+    <script src="/js/index.js"></script>
+</body>
+</html>
