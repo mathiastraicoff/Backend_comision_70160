@@ -13,6 +13,7 @@
     <p>Categoría: {{product.category}}</p>
     <form action="/api/products/{{product._id}}/add-to-cart" method="POST">
         <input type="number" name="quantity" value="1" min="1">
+        <input type="hidden" name="returnTo" value="{{product._id}}">
         <button type="submit">Agregar al carrito</button>
     </form>
     <a href="/products">Volver a productos</a>

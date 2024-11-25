@@ -1,4 +1,4 @@
-import express from 'express'; 
+import express from 'express';
 import mongoose from 'mongoose';
 import session from 'express-session';
 import { engine } from 'express-handlebars';
@@ -12,28 +12,24 @@ import { __dirname } from './utils.js';
 import CartManager from './service/CartManager.js';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import passport from './config/passport.js';
+import { passport } from './config/passport.js';
 import sessionRouter from './routes/session.router.js';
-import cors from 'cors';
 import MongoStore from 'connect-mongo';
 import methodOverride from 'method-override';
 import authRouter from './routes/auth.router.js';
+import purchaseRouter from './routes/purchase.router.js';
 
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const cartManager = new CartManager(); 
+const cartManager = new CartManager();
 
 // Conectar a MongoDB
 mongoose.connect(process.env.MONGODB_URI)
-    .then(() => {
-        console.log('Conexión a MongoDB exitosa');
-    })
-    .catch((error) => {
-        console.error('Error al conectar a MongoDB:', error);
-    });
+    .then(() => console.log('Conexión a MongoDB exitosa'))
+    .catch((error) => console.error('Error al conectar a MongoDB:', error));
 
 // Configuración de Handlebars
 app.engine('handlebars', engine({
@@ -47,13 +43,8 @@ app.engine('handlebars', engine({
 app.set('view engine', 'handlebars');
 app.set('views', path.join(__dirname, 'views'));
 
-
 // Middleware
-app.use(cors({
-    origin: 'http://localhost:8080',
-    credentials: true
-}));
-app.use(cookieParser()); 
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
@@ -66,15 +57,16 @@ app.use(session({
     saveUninitialized: true,
     cookie: { secure: process.env.NODE_ENV === 'production', httpOnly: true }
 }));
-app.use(methodOverride('_method')); 
+app.use(methodOverride('_method'));
 app.use(passport.initialize());
 
 // Rutas
 app.use('/api/carts', cartsRouter);
 app.use('/api/products', productsRouter);
 app.use('/', viewsRouter);
-app.use('/api/sessions', sessionRouter); 
+app.use('/api/sessions', sessionRouter);
 app.use('/api/sessions', authRouter);
+app.use('/api/purchases', purchaseRouter);
 
 // Configuración de sockets
 io.on('connection', (socket) => {
@@ -84,14 +76,6 @@ io.on('connection', (socket) => {
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Ruta protegida
-app.get('/api/protected', passport.authenticate('jwt', { session: false }), (req, res) => {
-    res.json({ message: 'Acceso permitido', user: req.user });
+server.listen(process.env.PORT || 8080, () => {
+    console.log(`Servidor corriendo en el puerto ${process.env.PORT || 8080}`);
 });
-
-// Iniciar el servidor
-const PORT = process.env.PORT;
-server.listen(PORT, () => {
-    console.log(`Servidor escuchando en el puerto ${process.env.PORT}`);
-});
-

@@ -1,152 +1,49 @@
-import { Router } from 'express'; 
-import ProductManager from '../service/ProductManager.js';
-import CartManager from '../service/CartManager.js';
-import mongoose from 'mongoose';
+import { Router } from 'express';
+import passport from 'passport';
+import ProductController from '../controllers/product.controller.js';
+import CartController from '../controllers/cart.controller.js'; 
 
 const router = Router();
-const productManager = new ProductManager();
-const cartManager = new CartManager();
+const productController = new ProductController();
+const cartController = new CartController(); 
 
+// Middleware de Passport para verificar el JWT
+const authMiddleware = passport.authenticate('jwt', { session: false });
+
+// GET /products (sin protección)
 router.get('/', async (req, res) => {
-    const { limit = 10, page = 1, sort, category, availability } = req.query;
-
     try {
-        const filter = {};
-        if (category) {
-            filter.category = category;
-        }
-        if (availability) {
-            filter.available = availability === 'true'; 
-        }
-
-        const { products, totalProducts } = await productManager.getAll({
-            limit,
-            page,
-            sort,
-            category,
-            availability,
-        });
-
-        const totalPages = Math.ceil(totalProducts / limit);
-        const plainProducts = products.map(product => product.toObject());
-
-        res.render('products', {
-            products: plainProducts,
-            totalPages,
-            currentPage: parseInt(page),
-            hasNextPage: parseInt(page) < totalPages,
-            hasPrevPage: parseInt(page) > 1,
-            prevPage: parseInt(page) > 1 ? parseInt(page) - 1 : null,
-            nextPage: parseInt(page) < totalPages ? parseInt(page) + 1 : null,
-            limit,
-            sort,
-            category,
-            availability,
-        });
+        const products = await productController.getAllProducts(req.query);
+        res.json({ status: 'success', products });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Error al obtener los productos' });
+        res.status(500).json({ status: 'error', message: error.message });
     }
 });
 
+// POST /products/:pid/add-to-cart
 router.post('/:pid/add-to-cart', async (req, res) => {
-    const quantity = 1; 
-    await handleAddToCart(req, res, quantity);
-});
-
-// Función para manejar la lógica de agregar al carrito
-async function handleAddToCart(req, res, quantity) {
-    const productId = req.params.pid;
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-        return res.status(400).json({ error: 'ID de producto inválido' });
-    }
-
-    let cartId = req.session.cartId;
-    if (!cartId) {
-        const cart = await cartManager.add(); 
-        cartId = cart._id;
-        req.session.cartId = cartId; 
-    }
-
-    // Agregar el producto al carrito
     try {
-        await cartManager.addProduct(cartId, productId, quantity);
-        res.redirect('/products'); 
-    } catch (error) {
-        res.status(500).json({ error: 'Error al agregar el producto al carrito' });
-    }
-}
+        const { pid } = req.params; 
+        const { quantity, returnTo } = req.body; 
+        const cartId = req.session.cartId; 
 
-// Rutas para actualizar y eliminar productos
-router.put('/:pid', async (req, res) => {
-    const productId = req.params.pid;
-
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-        return res.status(400).json({ error: 'ID de producto inválido' });
-    }
-
-    try {
-        const updatedProduct = await productManager.update(productId, req.body);
-        res.json(updatedProduct);
-    } catch (error) {
-        res.status(500).json({ error: 'Error al actualizar el producto' });
-    }
-});
-
-router.delete('/:pid', async (req, res) => {
-    const productId = req.params.pid;
-
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-        return res.status(400).json({ error: 'ID de producto inválido' });
-    }
-
-    try {
-        await productManager.delete(productId);
-        res.json({ message: 'Producto eliminado' });
-    } catch (error) {
-        res.status(500).json({ error: 'Error al eliminar el producto' });
-    }
-});
-
-// Ruta para ver detalles de un producto
-router.get('/:pid', async (req, res) => {
-    const productId = req.params.pid;
-
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-        return res.status(400).json({ error: 'ID de producto inválido' });
-    }
-
-    try {
-        const product = await productManager.getById(productId);
-        if (product) {
-            res.render('productDetail', { product });
-        } else {
-            res.status(404).send('Producto no encontrado');
+        if (!cartId) {
+            return res.status(400).json({ status: 'error', message: 'No se encontró el carrito' });
         }
-    } catch (error) {
-        res.status(500).send('Error al obtener el producto');
-    }
-});
 
-// Ruta para obtener el carrito
-router.get('/carts/:cid', async (req, res) => {
-    const cartId = req.params.cid;
+        // Agregar el producto al carrito
+        const cart = await cartController.addProductToCart(cartId, pid, parseInt(quantity, 10));
 
-    if (!mongoose.Types.ObjectId.isValid(cartId)) {
-        return res.status(400).json({ error: 'ID de carrito inválido' });
-    }
-
-    try {
-        const cart = await cartManager.getCartById(cartId);
-        if (cart) {
-            res.render('cartDetail', { cart });
-        } else {
-            res.status(404).send('Carrito no encontrado');
+        // Manejar redirección si se especifica returnTo
+        if (returnTo) {
+            return res.redirect(returnTo); 
         }
+
+        // Si no se especifica `returnTo`, devolver JSON
+        res.json({ status: 'success', cart });
     } catch (error) {
-        res.status(500).send('Error al obtener el carrito');
+        res.status(500).json({ status: 'error', message: error.message });
     }
 });
 
 export default router;
-

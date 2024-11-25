@@ -1,58 +1,86 @@
-import Cart from '../models/Cart.js';
-import mongoose from 'mongoose';
+import CartRepository from '../repositories/CartRepository.js';
+import ProductRepository from '../repositories/ProductRepository.js';
+import TicketRepository from '../repositories/TicketRepository.js';
+import Cart from '../dao/mongo/models/carts.js'; 
 
 class CartManager {
-    async add() {
-        const newCart = new Cart();
-        await newCart.save();
-        return newCart;
+    constructor() {
+        this.cartRepo = new CartRepository(Cart);  
+        this.productRepo = new ProductRepository();
+        this.ticketRepo = new TicketRepository();
     }
 
-    async addProduct(cartId, productId, quantity) {
-        if (!mongoose.Types.ObjectId.isValid(cartId)) {
-            throw new Error('ID de carrito inválido');
-        }
-
-        const cart = await Cart.findById(cartId);
-        if (!cart) {
-            throw new Error('Carrito no encontrado');
-        }
-        if (!Array.isArray(cart.products)) {
-            cart.products = [];
-        }
-
-        const productIndex = cart.products.findIndex(item => {
-            return item.product && item.product.equals(productId); 
-        });
-
-        if (productIndex === -1) {
-            cart.products.push({ product: productId, quantity });
-        } else {
-            cart.products[productIndex].quantity += quantity;
-        }
+    async createCart() {
         try {
-            await cart.save();
+            const cart = await this.cartRepo.create(); 
+            return cart;
         } catch (error) {
-            console.error('Error al guardar el carrito:', error);
-            throw new Error('Error al guardar el carrito');
+            throw new Error('Error creating cart: ' + error.message);  
         }
-
-        return cart;
     }
 
-    async getCartById(cartId) {
-        if (!mongoose.Types.ObjectId.isValid(cartId)) {
-            throw new Error('ID de carrito inválido');
-        }
+    async addProductToCart(cartId, productId, quantity) {
+        try {
+            const cart = await this.cartRepo.getById(cartId);
+            const product = await this.productRepo.getById(productId);
+            
+            if (!product) throw new Error('Product not found');
+            if (product.stock < quantity) throw new Error('Not enough stock');
 
-        const cart = await Cart.findById(cartId).populate('products.product');
-        if (!cart) {
-            throw new Error('Carrito no encontrado');
+            cart.products.push({ productId, quantity });
+            await this.cartRepo.update(cartId, cart);
+            return cart;
+        } catch (error) {
+            throw new Error('Error adding product to cart: ' + error.message);
         }
-        return cart;
+    }
+
+    async removeProductFromCart(cartId, productId) {
+        try {
+            const cart = await this.cartRepo.getById(cartId);
+            cart.products = cart.products.filter(item => item.productId !== productId);
+            await this.cartRepo.update(cartId, cart);
+            return cart;
+        } catch (error) {
+            throw new Error('Error removing product from cart');
+        }
+    }
+
+    async finalizePurchase(cartId, userEmail) {
+        try {
+            const cart = await this.cartRepo.getById(cartId);
+            let totalAmount = 0;
+            let unavailableProducts = [];
+
+            for (let item of cart.products) {
+                const product = await this.productRepo.getById(item.productId);
+
+                if (product.stock >= item.quantity) {
+                    totalAmount += product.price * item.quantity;
+                    product.stock -= item.quantity;
+                    await this.productRepo.update(product.id, product);
+                } else {
+                    unavailableProducts.push(item.productId);
+                }
+            }
+
+            // Crear el ticket
+            const ticket = await this.ticketRepo.create({
+                code: `TICKET-${Date.now()}`,
+                amount: totalAmount,
+                purchaser: userEmail,
+                purchase_datetime: new Date(),
+            });
+
+            // Actualizar el carrito con los productos restantes (aquellos que no se pudieron comprar)
+            cart.products = cart.products.filter(item => !unavailableProducts.includes(item.productId));
+            await this.cartRepo.update(cartId, cart);
+
+            return { ticket, unavailableProducts };
+        } catch (error) {
+            throw new Error('Error finalizing purchase: ' + error.message);
+        }
     }
 }
 
 export default CartManager;
-
-

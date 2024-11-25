@@ -6,61 +6,72 @@
     <link rel="stylesheet" href="/css/style.css">
     <title>Carrito</title>
     <script>
+        // Función para eliminar un producto del carrito
         async function deleteProduct(cid, pid) {
-            const response = await fetch(`/api/carts/${cid}/products/${pid}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            const result = await response.json();
+            try {
+                const response = await fetch(`/api/carts/${cid}/products/${pid}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
 
-            if (result.status === 'success') {
-                document.getElementById(`product-${pid}`).remove();
-            } else {
-                alert('Error al eliminar el producto');
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    document.getElementById(`product-${pid}`).remove(); 
+                    // Actualizar el contador de productos en el carrito si se implementa
+                    // updateCartCount(cid);
+                } else {
+                    alert('Error al eliminar el producto: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error de red: ' + error.message);
             }
         }
 
+        // Función para vaciar el carrito
         async function clearCart(cid) {
-            const response = await fetch(`/api/carts/${cid}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            const result = await response.json();
+            try {
+                const response = await fetch(`/api/carts/${cid}/clear`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
 
-            if (result.status === 'success') {
-                const cartContainer = document.querySelector('.cart-container');
-                cartContainer.innerHTML = '<p>El carrito está vacío.</p>';
-            } else {
-                alert('Error al vaciar el carrito');
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    location.reload(); 
+                } else {
+                    alert('Error al limpiar el carrito: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error de red: ' + error.message);
             }
         }
     </script>
 </head>
 <body>
-    <h1>Carrito</h1>
-    <div class="cart-container">
-        {{#if cart.products.length}}
-            <ul>
-                {{#each cart.products}}
-                    <li id="product-{{this.product._id}}">
-                        Producto: {{this.product.title}} <br>
-                        Precio: ${{this.product.price}} <br>
-                        Cantidad: {{this.quantity}} <br>
-                        <form onsubmit="event.preventDefault(); deleteProduct('{{../cart._id}}', '{{this.product._id}}');">
-                            <button type="submit">Eliminar</button>
-                        </form>
-                    </li>
-                {{/each}}
-            </ul>
-            <button onclick="clearCart('{{cart._id}}')">Eliminar todos los productos del carrito</button>
-        {{else}}
-            <p>El carrito está vacío.</p>
-        {{/if}}
-    </div>
-    <a href="/products">Volver a productos</a>
+    <h1>Detalle del Carrito</h1>
+    <ul>
+        {{#each cart.products}}
+            <li id="product-{{this.product._id}}">
+                <strong>Producto:</strong> {{this.product.name}}<br>
+                <strong>Cantidad:</strong> {{this.quantity}}<br>
+                <strong>Precio:</strong> ${{this.product.price}}<br>
+                <button onclick="deleteProduct('{{../cart.id}}', '{{this.product._id}}')">Eliminar</button>
+            </li>
+        {{/each}}
+    </ul>
+    <button onclick="clearCart('{{cart.id}}')">Vaciar Carrito</button>
 </body>
 </html>

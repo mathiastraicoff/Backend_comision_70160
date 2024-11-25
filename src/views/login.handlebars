@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión / Registro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css">
     <style>
-        /* Puedes agregar estilos aquí para mejorar la apariencia */
+        /* Estilos adicionales */
         body {
             font-family: Arial, sans-serif;
             display: flex;
@@ -39,28 +40,33 @@
             text-decoration: underline;
             cursor: pointer;
         }
+        .error-message {
+            color: red;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div>
         <h1 id="form-title">Iniciar Sesión</h1>
-        
+
         <!-- Formulario de inicio de sesión -->
         <form id="login-form">
             <div>
                 <label for="email">Email:</label>
                 <input type="email" id="email" name="email" required>
+                <div id="login-error" class="error-message" style="display:none;">Por favor, ingresa un email válido.</div>
             </div>
             <div>
                 <label for="password">Contraseña:</label>
                 <input type="password" id="password" name="password" required>
+                <div id="password-error" class="error-message" style="display:none;">Por favor, ingresa tu contraseña.</div>
             </div>
             <button type="submit">Iniciar Sesión</button>
         </form>
 
         <!-- Formulario de registro -->
         <form id="register-form" style="display:none;">
-            <h1>Registro</h1>
             <div>
                 <label for="first_name">Nombre:</label>
                 <input type="text" id="first_name" name="first_name" required>
@@ -72,6 +78,11 @@
             <div>
                 <label for="register_email">Email:</label>
                 <input type="email" id="register_email" name="register_email" required>
+                <div id="register-email-error" class="error-message" style="display:none;">Por favor, ingresa un email válido.</div>
+            </div>
+            <div>
+                <label for="phone">Número de Teléfono:</label>
+                <input type="tel" id="phone" name="phone" required>
             </div>
             <div>
                 <label for="age">Edad:</label>
@@ -81,37 +92,41 @@
                 <label for="register_password">Contraseña:</label>
                 <input type="password" id="register_password" name="register_password" required>
             </div>
+            <div>
+                <label for="confirm_password">Confirmar Contraseña:</label>
+                <input type="password" id="confirm_password" name="confirm_password" required>
+                <div id="password-match-error" class="error-message" style="display:none;">Las contraseñas no coinciden.</div>
+            </div>
+            <div>
+                <label for="admin_password">Contraseña de Admin (opcional):</label>
+                <input type="password" id="admin_password" name="admin_password">
+                <small>Coloca la contraseña administrada por la empresa, o déjala en blanco.</small>
+            </div>
             <button type="submit">Registrar</button>
         </form>
 
         <button id="toggle-form">¿No tienes una cuenta? Regístrate aquí</button>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
     <script>
-        // Manejar el inicio de sesión
-        document.getElementById('login-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const email = event.target.email.value;
-            const password = event.target.password.value;
-
-            const response = await fetch('/api/sessions/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                localStorage.setItem('token', data.token);
-                window.location.href = '/'; // Redirigir a la página deseada
-            } else {
-                alert(data.message || 'Error al iniciar sesión');
-            }
+        // Inicialización de la librería para el teléfono
+        const phoneInput = document.querySelector("#phone");
+        const iti = window.intlTelInput(phoneInput, {
+            separateDialCode: true,
+            initialCountry: "auto",
+            geoIpLookup: function(callback) {
+                fetch("https://ipinfo.io?token=YOUR_TOKEN")
+                    .then((resp) => resp.json())
+                    .then((resp) => {
+                        const countryCode = (resp && resp.country) ? resp.country : "us";
+                        callback(countryCode);
+                    });
+            },
+            utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js",
         });
 
-        // Manejar el registro
+        // Lógica de registro
         document.getElementById('register-form').addEventListener('submit', async (event) => {
             event.preventDefault();
             const first_name = event.target.first_name.value;
@@ -119,13 +134,33 @@
             const register_email = event.target.register_email.value;
             const age = event.target.age.value;
             const register_password = event.target.register_password.value;
+            const confirm_password = event.target.confirm_password.value;
+            const admin_password = event.target.admin_password.value;
+
+            // Validación de contraseñas
+            if (register_password !== confirm_password) {
+                document.getElementById('password-match-error').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('password-match-error').style.display = 'none';
+            }
+
+            const phone = iti.getNumber(); 
 
             const response = await fetch('/api/sessions/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ first_name, last_name, email: register_email, age, password: register_password }),
+                body: JSON.stringify({
+                    first_name,
+                    last_name,
+                    email: register_email,
+                    age,
+                    password: register_password,
+                    admin_password,
+                    phone
+                }),
             });
 
             const data = await response.json();
@@ -139,7 +174,45 @@
             }
         });
 
-        // Alternar entre el formulario de inicio de sesión y el de registro
+        // Lógica de inicio de sesión
+        document.getElementById('login-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const email = event.target.email.value;
+            const password = event.target.password.value;
+
+            // Validaciones de campos
+            if (!email) {
+                document.getElementById('login-error').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('login-error').style.display = 'none';
+            }
+            if (!password) {
+                document.getElementById('password-error').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('password-error').style.display = 'none';
+            }
+
+            const response = await fetch('/api/sessions/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                localStorage.setItem('token', data.token);  
+                alert('Inicio de sesión exitoso');
+                window.location.href = '/';  
+            } else {
+                alert(data.message || 'Error al iniciar sesión');
+            }
+        });
+
+        // Cambio entre formularios de inicio de sesión y registro
         document.getElementById('toggle-form').addEventListener('click', () => {
             const loginForm = document.getElementById('login-form');
             const registerForm = document.getElementById('register-form');

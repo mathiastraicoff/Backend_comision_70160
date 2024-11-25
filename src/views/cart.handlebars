@@ -10,9 +10,9 @@
     <ul id="cart-list">
         {{#each cart.products}}
             <li>
-                <h2>{{this.productId.title}}</h2>
+                <h2>{{this.product.title}}</h2>
                 <p>Cantidad: {{this.quantity}}</p>
-                <button class="remove-from-cart-button" data-product-id="{{this.productId._id}}">Eliminar</button>
+                <button class="remove-from-cart-button" data-product-id="{{this.product._id}}">Eliminar</button>
             </li>
         {{/each}}
     </ul>
