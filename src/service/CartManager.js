@@ -12,7 +12,7 @@ class CartManager {
 
     async createCart() {
         try {
-            const cart = await this.cartRepo.create(); 
+            const cart = await this.cartRepo.create();  
             return cart;
         } catch (error) {
             throw new Error('Error creating cart: ' + error.message);  
@@ -79,6 +79,16 @@ class CartManager {
             return { ticket, unavailableProducts };
         } catch (error) {
             throw new Error('Error finalizing purchase: ' + error.message);
+        }
+    }
+
+    // Nuevo método getCartCount para contar productos en el carrito
+    async getCartCount(cartId) {
+        try {
+            const cart = await this.cartRepo.getById(cartId);
+            return cart.products.length;  
+        } catch (error) {
+            throw new Error('Error getting cart count: ' + error.message);
         }
     }
 }

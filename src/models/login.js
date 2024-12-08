@@ -1,35 +1,39 @@
-async function login() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+import UserManager from "../service/UserManager.js";
+import jwt from "jsonwebtoken";
 
-    try {
-        const response = await fetch('http://localhost:8080/api/sessions/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, password }),
-        });
+class LoginController {
+    // Controlador para iniciar sesión
+    async loginUser(req, res) {
+        const { email, password } = req.body;
 
-        if (response.ok) {
-            const data = await response.json();
-            console.log('Datos de inicio de sesión:', data);
-            if (data.token) { 
-                localStorage.setItem('token', data.token);
-                console.log('Token almacenado:', data.token);
-                window.location.href = '/home';
-            } else {
-                console.error('No se recibió token en la respuesta');
+        try {
+            const user = await UserManager.authenticate(email, password);
+            if (!user) {
+                return res.status(401).json({ message: "Credenciales inválidas" });
             }
-        } else {
-            const errorData = await response.json();
-            console.error('Error al iniciar sesión:', errorData.message);
-            alert(errorData.message);
+
+            // Generar token JWT
+            const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+            // Enviar el token como cookie
+            res.cookie("token", token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                maxAge: 3600000,  
+                sameSite: "Strict"
+            });
+
+            return res.status(200).json({ message: "Inicio de sesión exitoso", token });
+        } catch (error) {
+            return res.status(500).json({ message: "Error al iniciar sesión", error: error.message });
         }
-    } catch (error) {
-        console.error('Error de red:', error);
-        alert('Error al comunicarse con el servidor.');
+    }
+
+    // Controlador para cerrar sesión
+    async logoutUser(req, res) {
+        res.clearCookie("token");
+        return res.status(200).json({ message: "Sesión cerrada exitosamente" });
     }
 }
 
-document.getElementById('login-button').addEventListener('click', login);
+export default new LoginController();

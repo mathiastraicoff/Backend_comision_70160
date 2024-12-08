@@ -18,5 +18,5 @@ export function validateProductStock(cartProducts, productId, quantity, products
         throw new Error(`No hay suficiente stock del producto. Stock disponible: ${product.stock}`);
     }
 
-    return true;  // El stock es suficiente
+    return true;  
 }

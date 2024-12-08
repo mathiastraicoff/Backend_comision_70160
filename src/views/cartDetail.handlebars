@@ -24,8 +24,6 @@
 
                 if (result.status === 'success') {
                     document.getElementById(`product-${pid}`).remove(); 
-                    // Actualizar el contador de productos en el carrito si se implementa
-                    // updateCartCount(cid);
                 } else {
                     alert('Error al eliminar el producto: ' + result.message);
                 }
@@ -50,7 +48,7 @@
 
                 const result = await response.json();
                 if (result.status === 'success') {
-                    location.reload(); 
+                    location.reload();
                 } else {
                     alert('Error al limpiar el carrito: ' + result.message);
                 }

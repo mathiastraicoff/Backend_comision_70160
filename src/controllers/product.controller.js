@@ -1,3 +1,4 @@
+
 import ProductRepository from '../repositories/ProductRepository.js';
 
 class ProductController {

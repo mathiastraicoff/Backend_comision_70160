@@ -1,12 +1,11 @@
 import { Router } from 'express';
 import PurchaseController from '../controllers/purchase.controller.js';
+import authenticateToken from "../middleware/authenticateToken.js";
 
 const router = Router();
 const purchaseController = new PurchaseController();
 
-// POST /purchases/:cartId
-// Esta ruta finaliza la compra de un carrito y genera un ticket
-router.post('/:cartId', async (req, res) => {
+router.post('/:cartId', authenticateToken, async (req, res) => {
     try {
         const { cartId } = req.params;
         const { purchaser } = req.body; 

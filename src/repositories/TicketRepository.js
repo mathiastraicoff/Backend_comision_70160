@@ -14,3 +14,4 @@ class TicketRepository {
 }
 
 export default TicketRepository;
+

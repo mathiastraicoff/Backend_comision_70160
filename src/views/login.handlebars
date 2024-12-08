@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,7 +7,6 @@
     <title>Iniciar Sesión / Registro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css">
     <style>
-        /* Estilos adicionales */
         body {
             font-family: Arial, sans-serif;
             display: flex;
@@ -44,6 +44,17 @@
             color: red;
             font-size: 14px;
         }
+        .success-icon, .error-icon {
+            display: none;
+            width: 20px;
+            height: 20px;
+        }
+        .success-icon {
+            color: green;
+        }
+        .error-icon {
+            color: red;
+        }
     </style>
 </head>
 <body>
@@ -54,12 +65,12 @@
         <form id="login-form">
             <div>
                 <label for="email">Email:</label>
-                <input type="email" id="email" name="email" required>
+                <input type="email" id="email" name="email" autocomplete="email" required>
                 <div id="login-error" class="error-message" style="display:none;">Por favor, ingresa un email válido.</div>
             </div>
             <div>
                 <label for="password">Contraseña:</label>
-                <input type="password" id="password" name="password" required>
+                <input type="password" id="password" name="password" autocomplete="current-password" required>
                 <div id="password-error" class="error-message" style="display:none;">Por favor, ingresa tu contraseña.</div>
             </div>
             <button type="submit">Iniciar Sesión</button>
@@ -77,7 +88,7 @@
             </div>
             <div>
                 <label for="register_email">Email:</label>
-                <input type="email" id="register_email" name="register_email" required>
+                <input type="email" id="register_email" name="register_email" autocomplete="email" required>
                 <div id="register-email-error" class="error-message" style="display:none;">Por favor, ingresa un email válido.</div>
             </div>
             <div>
@@ -90,17 +101,21 @@
             </div>
             <div>
                 <label for="register_password">Contraseña:</label>
-                <input type="password" id="register_password" name="register_password" required>
+                <input type="password" id="register_password" name="register_password" autocomplete="new-password" required>
+                <span id="password-valid-icon" class="success-icon">&#10004;</span>
+                <span id="password-invalid-icon" class="error-icon">&#10060;</span>
             </div>
             <div>
                 <label for="confirm_password">Confirmar Contraseña:</label>
-                <input type="password" id="confirm_password" name="confirm_password" required>
+                <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password" required>
+                <span id="confirm-password-valid-icon" class="success-icon">&#10004;</span>
+                <span id="confirm-password-invalid-icon" class="error-icon">&#10060;</span>
                 <div id="password-match-error" class="error-message" style="display:none;">Las contraseñas no coinciden.</div>
             </div>
             <div>
                 <label for="admin_password">Contraseña de Admin (opcional):</label>
-                <input type="password" id="admin_password" name="admin_password">
-                <small>Coloca la contraseña administrada por la empresa, o déjala en blanco.</small>
+                <input type="password" id="admin_password" name="admin_password" autocomplete="new-password">
+                <span id="admin-password-icon"></span> <!-- Icono para verificar si es admin -->
             </div>
             <button type="submit">Registrar</button>
         </form>
@@ -109,127 +124,6 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
-    <script>
-        // Inicialización de la librería para el teléfono
-        const phoneInput = document.querySelector("#phone");
-        const iti = window.intlTelInput(phoneInput, {
-            separateDialCode: true,
-            initialCountry: "auto",
-            geoIpLookup: function(callback) {
-                fetch("https://ipinfo.io?token=YOUR_TOKEN")
-                    .then((resp) => resp.json())
-                    .then((resp) => {
-                        const countryCode = (resp && resp.country) ? resp.country : "us";
-                        callback(countryCode);
-                    });
-            },
-            utilsScript: "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js",
-        });
-
-        // Lógica de registro
-        document.getElementById('register-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const first_name = event.target.first_name.value;
-            const last_name = event.target.last_name.value;
-            const register_email = event.target.register_email.value;
-            const age = event.target.age.value;
-            const register_password = event.target.register_password.value;
-            const confirm_password = event.target.confirm_password.value;
-            const admin_password = event.target.admin_password.value;
-
-            // Validación de contraseñas
-            if (register_password !== confirm_password) {
-                document.getElementById('password-match-error').style.display = 'block';
-                return;
-            } else {
-                document.getElementById('password-match-error').style.display = 'none';
-            }
-
-            const phone = iti.getNumber(); 
-
-            const response = await fetch('/api/sessions/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    first_name,
-                    last_name,
-                    email: register_email,
-                    age,
-                    password: register_password,
-                    admin_password,
-                    phone
-                }),
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                alert('Registro exitoso. Ahora puedes iniciar sesión.');
-                document.getElementById('register-form').style.display = 'none';
-                document.getElementById('login-form').style.display = 'block';
-                document.getElementById('form-title').innerText = 'Iniciar Sesión';
-            } else {
-                alert(data.message || 'Error al registrarse');
-            }
-        });
-
-        // Lógica de inicio de sesión
-        document.getElementById('login-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const email = event.target.email.value;
-            const password = event.target.password.value;
-
-            // Validaciones de campos
-            if (!email) {
-                document.getElementById('login-error').style.display = 'block';
-                return;
-            } else {
-                document.getElementById('login-error').style.display = 'none';
-            }
-            if (!password) {
-                document.getElementById('password-error').style.display = 'block';
-                return;
-            } else {
-                document.getElementById('password-error').style.display = 'none';
-            }
-
-            const response = await fetch('/api/sessions/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                localStorage.setItem('token', data.token);  
-                alert('Inicio de sesión exitoso');
-                window.location.href = '/';  
-            } else {
-                alert(data.message || 'Error al iniciar sesión');
-            }
-        });
-
-        // Cambio entre formularios de inicio de sesión y registro
-        document.getElementById('toggle-form').addEventListener('click', () => {
-            const loginForm = document.getElementById('login-form');
-            const registerForm = document.getElementById('register-form');
-            const formTitle = document.getElementById('form-title');
-
-            if (loginForm.style.display === 'none') {
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
-                formTitle.innerText = 'Iniciar Sesión';
-                document.getElementById('toggle-form').innerText = '¿No tienes una cuenta? Regístrate aquí';
-            } else {
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
-                formTitle.innerText = 'Registro';
-                document.getElementById('toggle-form').innerText = '¿Ya tienes una cuenta? Inicia sesión aquí';
-            }
-        });
-    </script>
+    <script src="/js/formLogic.js"></script>
 </body>
 </html>

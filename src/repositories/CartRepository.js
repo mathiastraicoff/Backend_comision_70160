@@ -1,11 +1,11 @@
 class CartRepository {
     constructor(cartModel) {
-        this.cartModel = cartModel;  
+        this.cartModel = cartModel;  // Modelo de Cart pasado al repositorio
     }
 
     async create() {
         try {
-            const newCart = new this.cartModel({ products: [] });  
+            const newCart = new this.cartModel({ products: [] });  // Crear un carrito vacío
             await newCart.save();
             return newCart;
         } catch (error) {

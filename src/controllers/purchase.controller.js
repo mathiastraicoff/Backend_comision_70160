@@ -13,3 +13,4 @@ class PurchaseController {
 }
 
 export default PurchaseController;
+

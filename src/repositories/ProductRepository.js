@@ -3,13 +3,21 @@ class ProductRepository {
         this.productModel = productModel;
     }
 
+    async getProducts() {
+        try {
+            return await this.productModel.find(); // Recupera todos los productos
+        } catch (error) {
+            throw new Error('Error al obtener los productos: ' + error.message);
+        }
+    }
+
     async getById(productId) {
         try {
             const product = await this.productModel.findById(productId);
-            if (!product) throw new Error('Product not found');
+            if (!product) throw new Error('Producto no encontrado');
             return product;
         } catch (error) {
-            throw new Error(error.message);
+            throw new Error('Error al obtener el producto: ' + error.message);
         }
     }
 
@@ -17,7 +25,7 @@ class ProductRepository {
         try {
             return await product.save();
         } catch (error) {
-            throw new Error(error.message);
+            throw new Error('Error al actualizar el producto: ' + error.message);
         }
     }
 }

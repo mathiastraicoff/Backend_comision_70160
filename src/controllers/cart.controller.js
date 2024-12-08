@@ -1,3 +1,4 @@
+
 import CartRepository from '../repositories/CartRepository.js';
 import ProductRepository from '../repositories/ProductRepository.js';
 import CartDTO from '../dao/dto/CartDTO.js';
@@ -52,12 +53,12 @@ class CartController {
             const productsToBuy = cart.products.filter(product => product.quantity <= product.stock);
             const productsOutOfStock = cart.products.filter(product => product.quantity > product.stock);
 
-            // Update stock and create ticket
+            
             for (const product of productsToBuy) {
                 await ProductRepository.update(product.productId, { stock: product.stock - product.quantity });
             }
 
-            // Create ticket logic
+            
             const ticket = await TicketService.create({
                 purchaser: req.user.email,
                 amount: productsToBuy.reduce((acc, product) => acc + product.quantity * product.price, 0),

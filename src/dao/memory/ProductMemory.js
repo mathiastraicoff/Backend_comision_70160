@@ -23,3 +23,4 @@ class ProductMemory {
 }
 
 export default ProductMemory;
+
